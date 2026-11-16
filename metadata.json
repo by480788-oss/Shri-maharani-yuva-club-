@@ -1,0 +1,6 @@
+{
+  "name": "Shri Maharani Yuba Club",
+  "description": "Native Android Studio project (Kotlin + Jetpack Compose + Firebase) for Shri Maharani Yuba Club (श्री महारानी युवा क्लब).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

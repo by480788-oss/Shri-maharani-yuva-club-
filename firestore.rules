@@ -1,0 +1,327 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.admin == true ||
+        request.auth.token.superAdmin == true ||
+        (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true)
+      );
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && (
+        request.auth.token.superAdmin == true ||
+        (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'SUPER_ADMIN' &&
+         get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true)
+      );
+    }
+
+    function isApprovedActiveMember() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/members/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/members/$(request.auth.uid)).data.approvalStatus == 'APPROVED' &&
+        get(/databases/$(database)/documents/members/$(request.auth.uid)).data.activeStatus == 'ACTIVE';
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'fullName', 'email', 'phoneE164', 'preferredLanguage', 'emailOtpVerified', 'phoneVerified', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'fullName', 'email', 'phoneE164', 'preferredLanguage', 'fcmToken', 'emailOtpVerified', 'phoneVerified', 'createdAt']) &&
+        isValidId(data.uid) &&
+        data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 120 &&
+        data.email is string && data.email.size() <= 200 &&
+        data.phoneE164 is string && data.phoneE164.size() >= 6 && data.phoneE164.size() <= 20 &&
+        data.preferredLanguage in ['en', 'ne'] &&
+        data.emailOtpVerified is bool &&
+        data.phoneVerified is bool &&
+        data.createdAt is timestamp &&
+        (!('fcmToken' in data) || (data.fcmToken is string && data.fcmToken.size() <= 512));
+    }
+
+    function isValidMember(data) {
+      return data.keys().hasAll(['uid', 'memberCode', 'fullName', 'email', 'phoneE164', 'countryCode', 'approvalStatus', 'activeStatus', 'photoUrl', 'address', 'privacyShowPhone', 'privacyShowEmail', 'joinedAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'memberCode', 'fullName', 'email', 'phoneE164', 'countryCode', 'approvalStatus', 'activeStatus', 'photoUrl', 'address', 'privacyShowPhone', 'privacyShowEmail', 'joinedAt', 'updatedAt']) &&
+        isValidId(data.uid) &&
+        data.memberCode is string && data.memberCode.size() <= 32 &&
+        data.fullName is string && data.fullName.size() >= 1 && data.fullName.size() <= 120 &&
+        data.email is string && data.email.size() <= 200 &&
+        data.phoneE164 is string && data.phoneE164.size() >= 6 && data.phoneE164.size() <= 20 &&
+        data.countryCode is string && data.countryCode.size() <= 8 &&
+        data.approvalStatus in ['PENDING', 'APPROVED', 'REJECTED'] &&
+        data.activeStatus in ['ACTIVE', 'INACTIVE'] &&
+        data.photoUrl is string && data.photoUrl.size() <= 1000 &&
+        data.address is string && data.address.size() <= 250 &&
+        data.privacyShowPhone is bool &&
+        data.privacyShowEmail is bool &&
+        data.joinedAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidAnnouncement(data) {
+      return data.keys().hasAll(['id', 'type', 'titleEn', 'titleNe', 'bodyEn', 'bodyNe', 'publishedAt', 'readByUids']) &&
+        data.keys().hasOnly(['id', 'type', 'titleEn', 'titleNe', 'bodyEn', 'bodyNe', 'publishedAt', 'readByUids']) &&
+        isValidId(data.id) &&
+        data.type in ['ANNOUNCEMENT', 'NEWS'] &&
+        data.titleEn is string && data.titleEn.size() <= 200 &&
+        data.titleNe is string && data.titleNe.size() <= 200 &&
+        data.bodyEn is string && data.bodyEn.size() <= 5000 &&
+        data.bodyNe is string && data.bodyNe.size() <= 5000 &&
+        data.publishedAt is timestamp &&
+        data.readByUids is list && data.readByUids.size() <= 5000;
+    }
+
+    function isValidEvent(data) {
+      return data.keys().hasAll(['id', 'titleEn', 'titleNe', 'descriptionEn', 'descriptionNe', 'location', 'eventTimestamp', 'photoUrls', 'isPast']) &&
+        data.keys().hasOnly(['id', 'titleEn', 'titleNe', 'descriptionEn', 'descriptionNe', 'location', 'eventTimestamp', 'photoUrls', 'isPast']) &&
+        isValidId(data.id) &&
+        data.titleEn is string && data.titleEn.size() <= 200 &&
+        data.titleNe is string && data.titleNe.size() <= 200 &&
+        data.descriptionEn is string && data.descriptionEn.size() <= 5000 &&
+        data.descriptionNe is string && data.descriptionNe.size() <= 5000 &&
+        data.location is string && data.location.size() <= 250 &&
+        data.eventTimestamp is timestamp &&
+        data.photoUrls is list && data.photoUrls.size() <= 20 &&
+        data.isPast is bool;
+    }
+
+    function isValidActivity(data) {
+      return data.keys().hasAll(['id', 'titleEn', 'titleNe', 'summaryEn', 'summaryNe', 'activityDate', 'photoUrl']) &&
+        data.keys().hasOnly(['id', 'titleEn', 'titleNe', 'summaryEn', 'summaryNe', 'activityDate', 'photoUrl']) &&
+        isValidId(data.id) &&
+        data.titleEn is string && data.titleEn.size() <= 200 &&
+        data.titleNe is string && data.titleNe.size() <= 200 &&
+        data.summaryEn is string && data.summaryEn.size() <= 4000 &&
+        data.summaryNe is string && data.summaryNe.size() <= 4000 &&
+        data.activityDate is timestamp &&
+        data.photoUrl is string && data.photoUrl.size() <= 1000;
+    }
+
+    function isValidCommittee(data) {
+      return data.keys().hasAll(['id', 'name', 'positionEn', 'positionNe', 'photoUrl', 'contactInfo', 'bioEn', 'bioNe', 'orderIndex']) &&
+        data.keys().hasOnly(['id', 'name', 'positionEn', 'positionNe', 'photoUrl', 'contactInfo', 'bioEn', 'bioNe', 'orderIndex']) &&
+        isValidId(data.id) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        data.positionEn is string && data.positionEn.size() <= 120 &&
+        data.positionNe is string && data.positionNe.size() <= 120 &&
+        data.photoUrl is string && data.photoUrl.size() <= 1000 &&
+        data.contactInfo is string && data.contactInfo.size() <= 200 &&
+        data.bioEn is string && data.bioEn.size() <= 2000 &&
+        data.bioNe is string && data.bioNe.size() <= 2000 &&
+        data.orderIndex is int;
+    }
+
+    function isValidGallery(data) {
+      return data.keys().hasAll(['id', 'albumName', 'mediaType', 'mediaUrl', 'captionEn', 'captionNe', 'uploadedAt']) &&
+        data.keys().hasOnly(['id', 'albumName', 'mediaType', 'mediaUrl', 'captionEn', 'captionNe', 'uploadedAt']) &&
+        isValidId(data.id) &&
+        data.albumName is string && data.albumName.size() >= 1 && data.albumName.size() <= 120 &&
+        data.mediaType in ['PHOTO', 'VIDEO'] &&
+        data.mediaUrl is string && data.mediaUrl.size() >= 1 && data.mediaUrl.size() <= 1000 &&
+        data.captionEn is string && data.captionEn.size() <= 500 &&
+        data.captionNe is string && data.captionNe.size() <= 500 &&
+        data.uploadedAt is timestamp;
+    }
+
+    function isValidDonationCreate(data) {
+      return data.keys().hasAll(['id', 'memberUid', 'memberName', 'memberCode', 'amount', 'currency', 'referenceNumber', 'proofUrl', 'status', 'adminNote', 'submittedAt']) &&
+        data.keys().hasOnly(['id', 'memberUid', 'memberName', 'memberCode', 'amount', 'currency', 'referenceNumber', 'proofUrl', 'status', 'adminNote', 'submittedAt']) &&
+        isValidId(data.id) &&
+        data.memberUid == request.auth.uid &&
+        data.memberName is string && data.memberName.size() >= 1 && data.memberName.size() <= 120 &&
+        data.memberCode is string && data.memberCode.size() <= 32 &&
+        (data.amount is int || data.amount is float) && data.amount > 0 && data.amount <= 100000000 &&
+        data.currency is string && data.currency.size() >= 1 && data.currency.size() <= 8 &&
+        data.referenceNumber is string && data.referenceNumber.size() >= 1 && data.referenceNumber.size() <= 120 &&
+        data.proofUrl is string && data.proofUrl.size() <= 1000 &&
+        data.status == 'PENDING' &&
+        data.adminNote == '' &&
+        data.submittedAt is timestamp;
+    }
+
+    function isValidFundTransaction(data) {
+      return data.keys().hasAll(['id', 'type', 'category', 'amount', 'descriptionEn', 'descriptionNe', 'linkedDonationId', 'recordedByUid', 'transactionDate']) &&
+        data.keys().hasOnly(['id', 'type', 'category', 'amount', 'descriptionEn', 'descriptionNe', 'linkedDonationId', 'recordedByUid', 'transactionDate']) &&
+        isValidId(data.id) &&
+        data.type in ['INCOME', 'EXPENSE'] &&
+        data.category is string && data.category.size() >= 1 && data.category.size() <= 80 &&
+        (data.amount is int || data.amount is float) && data.amount > 0 &&
+        data.descriptionEn is string && data.descriptionEn.size() <= 1000 &&
+        data.descriptionNe is string && data.descriptionNe.size() <= 1000 &&
+        data.linkedDonationId is string && data.linkedDonationId.size() <= 128 &&
+        data.recordedByUid == request.auth.uid &&
+        data.transactionDate is timestamp;
+    }
+
+    function isValidNotificationRecord(data) {
+      return data.keys().hasAll(['titleEn', 'titleNe', 'bodyEn', 'bodyNe', 'status', 'sentCount', 'failureCount', 'createdAt', 'createdByUid']) &&
+        data.keys().hasOnly(['titleEn', 'titleNe', 'bodyEn', 'bodyNe', 'status', 'sentCount', 'failureCount', 'createdAt', 'createdByUid']) &&
+        data.titleEn is string && data.titleEn.size() <= 200 &&
+        data.titleNe is string && data.titleNe.size() <= 200 &&
+        data.bodyEn is string && data.bodyEn.size() <= 4000 &&
+        data.bodyNe is string && data.bodyNe.size() <= 4000 &&
+        data.status is string && data.status.size() <= 40 &&
+        data.sentCount is int && data.sentCount >= 0 &&
+        data.failureCount is int && data.failureCount >= 0 &&
+        data.createdAt is timestamp &&
+        data.createdByUid == request.auth.uid;
+    }
+
+    function isValidAdminLog(data) {
+      return data.keys().hasAll(['adminUid', 'adminEmail', 'action', 'targetCollection', 'targetId', 'details', 'timestamp']) &&
+        data.keys().hasOnly(['adminUid', 'adminEmail', 'action', 'targetCollection', 'targetId', 'details', 'timestamp']) &&
+        data.adminUid == request.auth.uid &&
+        data.adminEmail is string && data.adminEmail.size() <= 200 &&
+        data.action is string && data.action.size() >= 1 && data.action.size() <= 80 &&
+        data.targetCollection is string && data.targetCollection.size() >= 1 && data.targetCollection.size() <= 80 &&
+        data.targetId is string && data.targetId.size() <= 128 &&
+        data.details is string && data.details.size() <= 1000 &&
+        data.timestamp is timestamp;
+    }
+
+    // Server-only OTP storage
+    match /email_otps/{docId} {
+      allow read, write: if false;
+    }
+
+    // Public club settings (About, Contact, Terms, Privacy, Logo, Donation QR)
+    match /club_settings/{docId} {
+      allow get: if isValidId(docId) && docId == 'main';
+      allow list: if isAdmin();
+      allow create, update: if isValidId(docId) && isAdmin();
+      allow delete: if false;
+    }
+
+    match /users/{uid} {
+      allow get: if isValidId(uid) && isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(uid) && isSignedIn() && request.auth.uid == uid && isValidUser(incoming());
+      allow update: if isValidId(uid) && isSignedIn() && request.auth.uid == uid && isValidUser(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().email == existing().email &&
+        incoming().phoneE164 == existing().phoneE164 &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'preferredLanguage', 'fcmToken']);
+      allow delete: if isSuperAdmin();
+    }
+
+    match /members/{uid} {
+      allow get: if isValidId(uid) && isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if false; // Created strictly via Cloud Functions
+      allow update: if isValidId(uid) && isValidMember(incoming()) && (
+        isAdmin() || (
+          isSignedIn() && request.auth.uid == uid &&
+          incoming().uid == existing().uid &&
+          incoming().memberCode == existing().memberCode &&
+          incoming().approvalStatus == existing().approvalStatus &&
+          incoming().activeStatus == existing().activeStatus &&
+          incoming().email == existing().email &&
+          incoming().phoneE164 == existing().phoneE164 &&
+          incoming().countryCode == existing().countryCode &&
+          incoming().joinedAt == existing().joinedAt &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'address', 'photoUrl', 'privacyShowPhone', 'privacyShowEmail', 'updatedAt'])
+        )
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    match /admins/{uid} {
+      allow get: if isValidId(uid) && isAdmin();
+      allow list: if isAdmin();
+      allow write: if false; // Managed exclusively via Cloud Functions by Super Admin
+    }
+
+    match /announcements/{docId} {
+      allow get: if isValidId(docId) && (isApprovedActiveMember() || isAdmin());
+      allow list: if isApprovedActiveMember() || isAdmin();
+      allow create: if isValidId(docId) && isAdmin() && isValidAnnouncement(incoming());
+      allow update: if isValidId(docId) && isValidAnnouncement(incoming()) && (
+        isAdmin() || (
+          isApprovedActiveMember() &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['readByUids'])
+        )
+      );
+      allow delete: if isValidId(docId) && isAdmin();
+    }
+
+    match /events/{docId} {
+      allow get: if isValidId(docId) && (isApprovedActiveMember() || isAdmin());
+      allow list: if isApprovedActiveMember() || isAdmin();
+      allow create, update: if isValidId(docId) && isAdmin() && isValidEvent(incoming());
+      allow delete: if isValidId(docId) && isAdmin();
+    }
+
+    match /activities/{docId} {
+      allow get: if isValidId(docId) && (isApprovedActiveMember() || isAdmin());
+      allow list: if isApprovedActiveMember() || isAdmin();
+      allow create, update: if isValidId(docId) && isAdmin() && isValidActivity(incoming());
+      allow delete: if isValidId(docId) && isAdmin();
+    }
+
+    match /committee/{docId} {
+      allow get: if isValidId(docId) && (isApprovedActiveMember() || isAdmin());
+      allow list: if isApprovedActiveMember() || isAdmin();
+      allow create, update: if isValidId(docId) && isAdmin() && isValidCommittee(incoming());
+      allow delete: if isValidId(docId) && isAdmin();
+    }
+
+    match /gallery/{docId} {
+      allow get: if isValidId(docId) && (isApprovedActiveMember() || isAdmin());
+      allow list: if isApprovedActiveMember() || isAdmin();
+      allow create, update: if isValidId(docId) && isAdmin() && isValidGallery(incoming());
+      allow delete: if isValidId(docId) && isAdmin();
+    }
+
+    match /donations/{docId} {
+      allow get: if isValidId(docId) && isSignedIn() && (isAdmin() || resource.data.memberUid == request.auth.uid);
+      allow list: if isAdmin() || (isSignedIn() && resource.data.memberUid == request.auth.uid);
+      allow create: if isValidId(docId) && isApprovedActiveMember() && isValidDonationCreate(incoming());
+      allow update, delete: if false; // Processed atomically via Cloud Functions
+    }
+
+    match /fund_transactions/{docId} {
+      allow get: if isValidId(docId) && (isApprovedActiveMember() || isAdmin());
+      allow list: if isApprovedActiveMember() || isAdmin();
+      allow create, update: if isValidId(docId) && isAdmin() && isValidFundTransaction(incoming());
+      allow delete: if isValidId(docId) && isAdmin();
+    }
+
+    match /notification_records/{docId} {
+      allow get: if isValidId(docId) && (isAdmin() || (isSignedIn() && resource.data.createdByUid == request.auth.uid));
+      allow list: if isAdmin() || (isSignedIn() && resource.data.createdByUid == request.auth.uid);
+      allow create: if isValidId(docId) && isSignedIn() && isValidNotificationRecord(incoming()) && incoming().status == 'SUPPORT_TICKET';
+      allow update, delete: if isValidId(docId) && isAdmin();
+    }
+
+    match /admin_activity_logs/{docId} {
+      allow get: if isValidId(docId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(docId) && isAdmin() && isValidAdminLog(incoming());
+      allow update, delete: if false;
+    }
+  }
+}

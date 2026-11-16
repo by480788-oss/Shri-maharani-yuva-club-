@@ -1,0 +1,248 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Authenticated user identity and messaging preferences",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "fullName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "phoneE164": { "type": "string", "minLength": 6, "maxLength": 20, "pattern": "^\\+[1-9][0-9]{5,18}$" },
+        "preferredLanguage": { "type": "string", "enum": ["en", "ne"] },
+        "fcmToken": { "type": "string", "maxLength": 512 },
+        "emailOtpVerified": { "type": "boolean" },
+        "phoneVerified": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "fullName", "email", "phoneE164", "preferredLanguage", "emailOtpVerified", "phoneVerified", "createdAt"]
+    },
+    "Member": {
+      "title": "Member",
+      "description": "Genuine registered club member record",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "memberCode": { "type": "string", "maxLength": 32 },
+        "fullName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "phoneE164": { "type": "string", "minLength": 6, "maxLength": 20, "pattern": "^\\+[1-9][0-9]{5,18}$" },
+        "countryCode": { "type": "string", "minLength": 2, "maxLength": 8 },
+        "approvalStatus": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "activeStatus": { "type": "string", "enum": ["ACTIVE", "INACTIVE"] },
+        "photoUrl": { "type": "string", "maxLength": 1000 },
+        "address": { "type": "string", "maxLength": 250 },
+        "privacyShowPhone": { "type": "boolean" },
+        "privacyShowEmail": { "type": "boolean" },
+        "joinedAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "memberCode", "fullName", "email", "phoneE164", "countryCode", "approvalStatus", "activeStatus", "privacyShowPhone", "privacyShowEmail", "joinedAt", "updatedAt"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Authorized Super Admin or Admin user",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "fullName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "role": { "type": "string", "enum": ["SUPER_ADMIN", "ADMIN"] },
+        "active": { "type": "boolean" },
+        "grantedByUid": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "fullName", "role", "active", "grantedByUid", "createdAt"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "Bilingual club announcement or news update",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "type": { "type": "string", "enum": ["ANNOUNCEMENT", "NEWS"] },
+        "titleEn": { "type": "string", "maxLength": 200 },
+        "titleNe": { "type": "string", "maxLength": 200 },
+        "bodyEn": { "type": "string", "maxLength": 5000 },
+        "bodyNe": { "type": "string", "maxLength": 5000 },
+        "publishedAt": { "type": "string", "format": "date-time" },
+        "readByUids": { "type": "array" }
+      },
+      "required": ["id", "type", "titleEn", "titleNe", "bodyEn", "bodyNe", "publishedAt", "readByUids"]
+    },
+    "Event": {
+      "title": "Event",
+      "description": "Upcoming or past club event",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "titleEn": { "type": "string", "maxLength": 200 },
+        "titleNe": { "type": "string", "maxLength": 200 },
+        "descriptionEn": { "type": "string", "maxLength": 5000 },
+        "descriptionNe": { "type": "string", "maxLength": 5000 },
+        "location": { "type": "string", "maxLength": 250 },
+        "eventTimestamp": { "type": "string", "format": "date-time" },
+        "photoUrls": { "type": "array" },
+        "isPast": { "type": "boolean" }
+      },
+      "required": ["id", "titleEn", "titleNe", "descriptionEn", "descriptionNe", "location", "eventTimestamp", "photoUrls", "isPast"]
+    },
+    "Activity": {
+      "title": "Activity",
+      "description": "Club social or cultural activity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "titleEn": { "type": "string", "maxLength": 200 },
+        "titleNe": { "type": "string", "maxLength": 200 },
+        "summaryEn": { "type": "string", "maxLength": 4000 },
+        "summaryNe": { "type": "string", "maxLength": 4000 },
+        "activityDate": { "type": "string", "format": "date-time" },
+        "photoUrl": { "type": "string", "maxLength": 1000 }
+      },
+      "required": ["id", "titleEn", "titleNe", "summaryEn", "summaryNe", "activityDate", "photoUrl"]
+    },
+    "CommitteeMember": {
+      "title": "CommitteeMember",
+      "description": "Club executive committee member",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "positionEn": { "type": "string", "maxLength": 120 },
+        "positionNe": { "type": "string", "maxLength": 120 },
+        "photoUrl": { "type": "string", "maxLength": 1000 },
+        "contactInfo": { "type": "string", "maxLength": 200 },
+        "bioEn": { "type": "string", "maxLength": 2000 },
+        "bioNe": { "type": "string", "maxLength": 2000 },
+        "orderIndex": { "type": "integer" }
+      },
+      "required": ["id", "name", "positionEn", "positionNe", "photoUrl", "contactInfo", "bioEn", "bioNe", "orderIndex"]
+    },
+    "GalleryItem": {
+      "title": "GalleryItem",
+      "description": "Approved photo or video in a club album",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "albumName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "mediaType": { "type": "string", "enum": ["PHOTO", "VIDEO"] },
+        "mediaUrl": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "captionEn": { "type": "string", "maxLength": 500 },
+        "captionNe": { "type": "string", "maxLength": 500 },
+        "uploadedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "albumName", "mediaType", "mediaUrl", "captionEn", "captionNe", "uploadedAt"]
+    },
+    "Donation": {
+      "title": "Donation",
+      "description": "Member donation submission awaiting or verified by Admin",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "memberUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "memberName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "memberCode": { "type": "string", "maxLength": 32 },
+        "amount": { "type": "number" },
+        "currency": { "type": "string", "minLength": 3, "maxLength": 8 },
+        "referenceNumber": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "proofUrl": { "type": "string", "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["PENDING", "VERIFIED", "REJECTED"] },
+        "adminNote": { "type": "string", "maxLength": 500 },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "verifiedAt": { "type": "string", "format": "date-time" },
+        "verifiedByUid": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id", "memberUid", "memberName", "memberCode", "amount", "currency", "referenceNumber", "proofUrl", "status", "adminNote", "submittedAt"]
+    },
+    "FundTransaction": {
+      "title": "FundTransaction",
+      "description": "Club income and expense ledger entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "type": { "type": "string", "enum": ["INCOME", "EXPENSE"] },
+        "category": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "amount": { "type": "number" },
+        "descriptionEn": { "type": "string", "maxLength": 1000 },
+        "descriptionNe": { "type": "string", "maxLength": 1000 },
+        "linkedDonationId": { "type": "string", "maxLength": 128 },
+        "recordedByUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "transactionDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "type", "category", "amount", "descriptionEn", "descriptionNe", "linkedDonationId", "recordedByUid", "transactionDate"]
+    },
+    "ClubSettings": {
+      "title": "ClubSettings",
+      "description": "Official club branding, donation QR, About, Contact, Terms, Privacy",
+      "type": "object",
+      "properties": {
+        "officialLogoUrl": { "type": "string", "maxLength": 1000 },
+        "donationQrUrl": { "type": "string", "maxLength": 1000 },
+        "donationInstructionsEn": { "type": "string", "maxLength": 4000 },
+        "donationInstructionsNe": { "type": "string", "maxLength": 4000 },
+        "aboutEn": { "type": "string", "maxLength": 8000 },
+        "aboutNe": { "type": "string", "maxLength": 8000 },
+        "objectivesEn": { "type": "string", "maxLength": 8000 },
+        "objectivesNe": { "type": "string", "maxLength": 8000 },
+        "missionVisionEn": { "type": "string", "maxLength": 8000 },
+        "missionVisionNe": { "type": "string", "maxLength": 8000 },
+        "contactEmail": { "type": "string", "maxLength": 200 },
+        "contactPhone": { "type": "string", "maxLength": 60 },
+        "contactAddress": { "type": "string", "maxLength": 300 },
+        "socialLinks": { "type": "string", "maxLength": 1000 },
+        "termsEn": { "type": "string", "maxLength": 12000 },
+        "termsNe": { "type": "string", "maxLength": 12000 },
+        "privacyEn": { "type": "string", "maxLength": 12000 },
+        "privacyNe": { "type": "string", "maxLength": 12000 }
+      }
+    },
+    "NotificationRecord": {
+      "title": "NotificationRecord",
+      "description": "Push notification delivery log or member support ticket",
+      "type": "object",
+      "properties": {
+        "titleEn": { "type": "string", "maxLength": 200 },
+        "titleNe": { "type": "string", "maxLength": 200 },
+        "bodyEn": { "type": "string", "maxLength": 4000 },
+        "bodyNe": { "type": "string", "maxLength": 4000 },
+        "status": { "type": "string", "maxLength": 40 },
+        "sentCount": { "type": "integer" },
+        "failureCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "createdByUid": { "type": "string", "minLength": 1, "maxLength": 128 }
+      },
+      "required": ["titleEn", "titleNe", "bodyEn", "bodyNe", "status", "sentCount", "failureCount", "createdAt", "createdByUid"]
+    },
+    "AdminActivityLog": {
+      "title": "AdminActivityLog",
+      "description": "Immutable Admin audit trail record",
+      "type": "object",
+      "properties": {
+        "adminUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "adminEmail": { "type": "string", "maxLength": 200 },
+        "action": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "targetCollection": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "targetId": { "type": "string", "maxLength": 128 },
+        "details": { "type": "string", "maxLength": 1000 },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["adminUid", "adminEmail", "action", "targetCollection", "targetId", "details", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": { "schema": { "$ref": "#/entities/User" }, "description": "Private user identity and FCM token" },
+    "/members/{uid}": { "schema": { "$ref": "#/entities/Member" }, "description": "Registered member records" },
+    "/admins/{uid}": { "schema": { "$ref": "#/entities/Admin" }, "description": "Authorized admin role registry" },
+    "/announcements/{docId}": { "schema": { "$ref": "#/entities/Announcement" }, "description": "Club announcements and news" },
+    "/events/{docId}": { "schema": { "$ref": "#/entities/Event" }, "description": "Upcoming and past club events" },
+    "/activities/{docId}": { "schema": { "$ref": "#/entities/Activity" }, "description": "Club activities" },
+    "/committee/{docId}": { "schema": { "$ref": "#/entities/CommitteeMember" }, "description": "Executive committee directory" },
+    "/gallery/{docId}": { "schema": { "$ref": "#/entities/GalleryItem" }, "description": "Photo and video gallery" },
+    "/donations/{docId}": { "schema": { "$ref": "#/entities/Donation" }, "description": "Member donation records" },
+    "/fund_transactions/{docId}": { "schema": { "$ref": "#/entities/FundTransaction" }, "description": "Income and expense ledger" },
+    "/club_settings/{docId}": { "schema": { "$ref": "#/entities/ClubSettings" }, "description": "Public club metadata and donation QR" },
+    "/notification_records/{docId}": { "schema": { "$ref": "#/entities/NotificationRecord" }, "description": "FCM logs and support inquiries" },
+    "/admin_activity_logs/{docId}": { "schema": { "$ref": "#/entities/AdminActivityLog" }, "description": "Immutable admin audit logs" }
+  }
+}
